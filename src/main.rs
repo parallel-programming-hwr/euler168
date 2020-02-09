@@ -105,6 +105,7 @@ fn ubig_pow(base: u128, exp: usize) -> BigUint {
     num
 }
 
+#[allow(dead_code)]
 fn print_vector(vec: &[u8]) {
     for i in vec.iter() {
         print!("{}", i)
