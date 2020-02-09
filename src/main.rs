@@ -66,8 +66,8 @@ fn get_rotatable(tx: Sender<BigUint>, sen_time: Sender<bool>, start: u64, end: B
             let first = *digits.first().unwrap() as u64;
             let last = *digits.last().unwrap() as u64;
             if (last < 5 || first == last)
-                && first >= last
-                && !(first % 2 == 0 && digits[1] % 2 != 0) {
+                && !(first % 2 == 0 && digits[1] % 2 != 0)
+                && (first == last || first/2 >= last) {
                 digits.rotate_left(1);
                 let num_rotated = ubig_from_digits(digits);
                 if (&num_rotated % &num).is_zero() {
