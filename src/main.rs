@@ -28,7 +28,7 @@ fn main() {
             rec_timing.recv().unwrap();
             iterations += 10;
             if last_sent.elapsed().as_secs() > 10 {
-                println!("{:.2} iter/sec", iterations as f64/last_sent.elapsed().as_secs() as f64);
+                println!("{:.2} iter/s", iterations as f64/last_sent.elapsed().as_secs() as f64);
                 last_sent = Instant::now();
                 iterations = 0;
             }
@@ -48,7 +48,9 @@ fn get_rotatable(tx: Sender<BigUint>, sen_time: Sender<bool>, start: u64, end: B
     while num < end {
         if num.is_odd() || !(&num % 10 as u64).is_zero() {
             let mut digits = ubig_digits(num.clone());
-            if digits.first() >= digits.last() && (&num % *digits.first().unwrap() as u64).is_zero() {
+            if digits.first() >= digits.last()
+                && !(digits[0] % 2 == 0 && digits[1] % 2 == 1)
+                && (&num % *digits.first().unwrap() as u64).is_zero() {
                 digits.rotate_left(1);
                 let num_rotated = ubig_from_digits(digits);
                 if (num_rotated % &num).is_zero() {
