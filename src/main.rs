@@ -4,12 +4,21 @@ use num_traits::{ToPrimitive, Zero};
 use std::sync::mpsc::*;
 use std::thread;
 use std::time::Instant;
+use std::io::BufWriter;
+use std::io::prelude::*;
+use std::fs::OpenOptions;
 
 fn main() {
     let num_threads: u64 = num_cpus::get() as u64;
     let (tx, rx) = channel::<BigUint>();
     let (sen_timing, rec_timing) = channel::<bool>();
     let end: BigUint = ubig_pow(10, 100);
+    let file = OpenOptions::new()
+        .write(true)
+        .create(true)
+        .open("rotatable.txt")
+        .unwrap();
+    let mut buffer = BufWriter::new(file);
     println!("Starting {} threads...", num_threads);
     for i in 0u64..num_threads {
         let tx = tx.clone();
@@ -35,7 +44,12 @@ fn main() {
         }
     });
     loop {
-        println!("{}", rx.recv().unwrap());
+        let rotatable = rx.recv().unwrap();
+        println!("{}", rotatable);
+        if let Err(e) = buffer.write(&format!("{}\n", rotatable).into_bytes()) {
+            panic!(e);
+        }
+        let _ = buffer.flush();
     }
 }
 
@@ -50,11 +64,11 @@ fn get_rotatable(tx: Sender<BigUint>, sen_time: Sender<bool>, start: u64, end: B
         if num.is_odd() || !(&num % 10 as u64).is_zero() {
             let mut digits = ubig_digits(num.clone());
             if digits.first() >= digits.last()
-                && !(digits[0] % 2 == 0 && digits[1] % 2 == 1)
-                && (&num % *digits.first().unwrap() as u64).is_zero() {
+                && !(digits[0] % 2 == 0 && digits[1] % 2 != 0) {
                 digits.rotate_left(1);
+                let first = *digits.first().unwrap() as u64;
                 let num_rotated = ubig_from_digits(digits);
-                if (&num_rotated % &num).is_zero() {
+                if (first == 0 || (&num_rotated % first).is_zero()) && (&num_rotated % &num).is_zero() {
                     let _ = tx.send(num.clone());
                 }
             }
