@@ -26,7 +26,7 @@ fn main() {
         let mut iterations = 0;
         loop {
             rec_timing.recv().unwrap();
-            iterations += 10;
+            iterations += 1000;
             if last_sent.elapsed().as_secs() > 10 {
                 println!("{:.2} iter/s", iterations as f64/last_sent.elapsed().as_secs() as f64);
                 last_sent = Instant::now();
@@ -45,6 +45,7 @@ fn main() {
 /// the speed of the iterations
 fn get_rotatable(tx: Sender<BigUint>, sen_time: Sender<bool>, start: u64, end: BigUint, step: u64) {
     let mut num: BigUint = start.to_biguint().unwrap();
+    let mut count = 0;
     while num < end {
         if num.is_odd() || !(&num % 10 as u64).is_zero() {
             let mut digits = ubig_digits(num.clone());
@@ -53,12 +54,16 @@ fn get_rotatable(tx: Sender<BigUint>, sen_time: Sender<bool>, start: u64, end: B
                 && (&num % *digits.first().unwrap() as u64).is_zero() {
                 digits.rotate_left(1);
                 let num_rotated = ubig_from_digits(digits);
-                if (num_rotated % &num).is_zero() {
+                if (&num_rotated % &num).is_zero() {
                     let _ = tx.send(num.clone());
                 }
             }
         } else {
-            let _ = sen_time.send(true);
+            count += 1;
+            if count > 100 {
+                let _ = sen_time.send(true);
+                count = 0;
+            }
         }
         num += step;
     }
@@ -90,8 +95,18 @@ fn ubig_from_digits(digits: Vec<u8>) -> BigUint {
 /// returns ubig^exp
 fn ubig_pow(base: u128, exp: usize) -> BigUint {
     let mut num = base.to_biguint().unwrap();
-    for _ in 0..exp {
-        num *= base;
+    if exp > 1 {
+        for _ in 1..exp {
+            num *= base;
+        }
+    } else if exp == 0 {
+        num = 1.to_biguint().unwrap();
     }
     num
+}
+
+fn print_vector(vec: &[u8]) {
+    for i in vec.iter() {
+        print!("{}", i)
+    }
 }
