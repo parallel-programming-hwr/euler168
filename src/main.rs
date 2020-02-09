@@ -63,12 +63,14 @@ fn get_rotatable(tx: Sender<BigUint>, sen_time: Sender<bool>, start: u64, end: B
     while num < end {
         if num.is_odd() || !(&num % 10 as u64).is_zero() {
             let mut digits = ubig_digits(num.clone());
-            if digits.first() >= digits.last()
-                && !(digits[0] % 2 == 0 && digits[1] % 2 != 0) {
+            let first = *digits.first().unwrap() as u64;
+            let last = *digits.last().unwrap() as u64;
+            if (last < 5 || first == last)
+                && first >= last
+                && !(first % 2 == 0 && digits[1] % 2 != 0) {
                 digits.rotate_left(1);
-                let first = *digits.first().unwrap() as u64;
                 let num_rotated = ubig_from_digits(digits);
-                if (first == 0 || (&num_rotated % first).is_zero()) && (&num_rotated % &num).is_zero() {
+                if (&num_rotated % &num).is_zero() {
                     let _ = tx.send(num.clone());
                 }
             }
