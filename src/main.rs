@@ -2,7 +2,6 @@ use num_bigint::{BigUint, ToBigUint};
 use num_integer::Integer;
 use num_traits::{ToPrimitive, Zero};
 use std::sync::mpsc::*;
-use std::ops::MulAssign;
 use std::thread;
 use std::time::Instant;
 
@@ -27,7 +26,7 @@ fn main() {
         let mut iterations = 0;
         loop {
             rec_timing.recv().unwrap();
-            iterations += 1;
+            iterations += 10;
             if last_sent.elapsed().as_secs() > 10 {
                 println!("{:.2} iter/sec", iterations as f64/last_sent.elapsed().as_secs() as f64);
                 last_sent = Instant::now();
@@ -46,21 +45,20 @@ fn main() {
 /// the speed of the iterations
 fn get_rotatable(tx: Sender<BigUint>, sen_time: Sender<bool>, start: u64, end: BigUint, step: u64) {
     let mut num: BigUint = start.to_biguint().unwrap();
-    let zero: BigUint = 0.to_biguint().unwrap();
-    let ten: BigUint = 10.to_biguint().unwrap();
     while num < end {
-        if num.is_odd() || !num.is_multiple_of(&ten) {
+        if num.is_odd() || !(&num % 10 as u64).is_zero() {
             let mut digits = ubig_digits(num.clone());
-            if digits.first() >= digits.last() {
+            if digits.first() >= digits.last() && (&num % *digits.first().unwrap() as u64).is_zero() {
                 digits.rotate_left(1);
                 let num_rotated = ubig_from_digits(digits);
                 if (num_rotated % &num).is_zero() {
                     let _ = tx.send(num.clone());
                 }
             }
+        } else {
+            let _ = sen_time.send(true);
         }
         num += step;
-        let _ = sen_time.send(true);
     }
 }
 
@@ -91,7 +89,7 @@ fn ubig_from_digits(digits: Vec<u8>) -> BigUint {
 fn ubig_pow(base: u128, exp: usize) -> BigUint {
     let mut num = base.to_biguint().unwrap();
     for _ in 0..exp {
-        num.mul_assign(base)
+        num *= base;
     }
     num
 }
