@@ -1,6 +1,6 @@
 use num_bigint::{BigUint, ToBigUint};
 use num_integer::Integer;
-use num_traits::ToPrimitive;
+use num_traits::{ToPrimitive, Zero};
 use std::sync::mpsc::*;
 use std::ops::MulAssign;
 use std::thread;
@@ -10,7 +10,7 @@ fn main() {
     let num_threads: u64 = num_cpus::get() as u64;
     let (tx, rx) = channel::<BigUint>();
     let (sen_timing, rec_timing) = channel::<bool>();
-    let end: BigUint = ubig_pow(10.to_biguint().unwrap(), 100);
+    let end: BigUint = ubig_pow(10, 100);
     println!("Starting {} threads...", num_threads);
     for i in 0u64..num_threads {
         let tx = tx.clone();
@@ -47,12 +47,17 @@ fn main() {
 fn get_rotatable(tx: Sender<BigUint>, sen_time: Sender<bool>, start: u64, end: BigUint, step: u64) {
     let mut num: BigUint = start.to_biguint().unwrap();
     let zero: BigUint = 0.to_biguint().unwrap();
+    let ten: BigUint = 10.to_biguint().unwrap();
     while num < end {
-        let mut digits = ubig_digits(num.clone());
-        digits.rotate_right(1);
-        let num_rotated = ubig_from_digits(digits);
-        if (num_rotated % &num) == zero {
-            let _ = tx.send(num.clone());
+        if num.is_odd() || !num.is_multiple_of(&ten) {
+            let mut digits = ubig_digits(num.clone());
+            if digits.first() >= digits.last() {
+                digits.rotate_left(1);
+                let num_rotated = ubig_from_digits(digits);
+                if (num_rotated % &num).is_zero() {
+                    let _ = tx.send(num.clone());
+                }
+            }
         }
         num += step;
         let _ = sen_time.send(true);
@@ -60,33 +65,33 @@ fn get_rotatable(tx: Sender<BigUint>, sen_time: Sender<bool>, start: u64, end: B
 }
 
 /// returns a vector containing the digits of the BigUint
-fn ubig_digits(big_number: BigUint) -> Vec<u32> {
+fn ubig_digits(big_number: BigUint) -> Vec<u8> {
     let mut num: BigUint = big_number;
-    let mut digits: Vec<u32> = vec![];
+    let mut digits: Vec<u8> = vec![];
     let zero: BigUint = 0.to_biguint().unwrap();
     let ten: BigUint = 10.to_biguint().unwrap();
     while num > zero {
         let (quot, rem) = num.div_rem(&ten);
         num = quot;
-        digits.push(rem.to_u32().unwrap());
+        digits.push(rem.to_u8().unwrap());
     }
     digits
 }
 
 /// returns a BigUint for a vector of digits
-fn ubig_from_digits(digits: Vec<u32>) -> BigUint {
+fn ubig_from_digits(digits: Vec<u8>) -> BigUint {
     let mut num: BigUint = 0.to_biguint().unwrap();
     for (index, digit) in digits.iter().enumerate() {
-        num += digit * (10 as u32).pow(index as u32);
+        num += ubig_pow(10, index) * digit;
     }
     num
 }
 
 /// returns ubig^exp
-fn ubig_pow(ubig: BigUint, exp: usize) -> BigUint {
-    let mut num = ubig.clone();
+fn ubig_pow(base: u128, exp: usize) -> BigUint {
+    let mut num = base.to_biguint().unwrap();
     for _ in 0..exp {
-        num.mul_assign(ubig.clone())
+        num.mul_assign(base)
     }
     num
 }
